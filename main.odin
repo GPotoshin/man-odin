@@ -10,7 +10,6 @@ import s "core:text/scanner"
 import "core:unicode/utf8"
 import "core:flags"
 
-ODIN_BASE :: "/usr/local/paquets/odin-macos-arm64-nightly+2026-03-03/"
 COMMENT_LITS :: " /*\n"
 
 replace_char :: proc(s: string, old: byte, new: byte) {
@@ -49,6 +48,9 @@ Options :: struct {
 main :: proc() {
   file_content: []byte
   target_path: string
+  collection_name: string
+  subpath: string
+
   opt: Options
 
   flags.parse_or_exit(&opt, os.args, .Odin)
@@ -69,8 +71,8 @@ main :: proc() {
         return
       }
       odin_path := string(stdout)
-      collection_name := opt.path[:sep]
-      subpath := opt.path[sep+1:]
+      collection_name = opt.path[:sep]
+      subpath = opt.path[sep+1:]
       
       target_path = slashpath.join({odin_path, collection_name, subpath})
     } else {
@@ -80,46 +82,29 @@ main :: proc() {
 
   fmt.println("we are getting path:", target_path)
 
-  file_root, open_err := os.open(target_path)
-  defer os.close(file_root)
+  root_file, open_err := os.open(target_path)
   if open_err != nil {
-    fmt.println("")
+    fmt.println("failed to open path:", target_path)
     return
   }
-
-  filename := "core/strings/strings.odin"
-  {
-    file_path := slashpath.join({ODIN_BASE, filename})
-
-    fp, ferr := os.open(file_path)
-    if ferr != nil {
-      fmt.println("failed to open `", filename, "` due to ", ferr)
-      return
-    }
-    defer os.close(fp)
-
-    file_size, serr := os.file_size(fp)
-    if serr != nil {
-      fmt.println("failed to get size of `", filename, "` due to ", serr)
-      return
-    }
-
-    file_content = make([]byte, file_size)
-    if file_content == nil {
-      fmt.println("failed to allocate memory")
-      return
-    }
-
-    read_size, rerr := os.read(fp, file_content)
-    if rerr != nil {
-      delete(file_content)
-      fmt.println("failed to read from doc file due to ", rerr)
-      return
-    }
+  defer os.close(root_file)
+  root_info, stat_err := os.fstat(root_file, context.temp_allocator)
+  if stat_err != nil {
+    fmt.println("failed to get path info:", target_path)
   }
-  defer delete(file_content)
 
-  fp, ferr := os.open("test.3", os.O_WRONLY+os.O_CREATE)
+  #partial switch root_info.type {
+  case .Directory:
+    fmt.println("that is directory")
+  case .Regular:
+    fmt.println("that is a regular file")
+  case:
+    fmt.println("unsupported")
+  }
+}
+
+write_header :: proc(code: string, w: io.Writer) -> io.Error {
+  fp, ferr := os.open("test.3", os.O_WRONLY|os.O_CREATE)
   defer os.close(fp)
   buf: [1024]byte
   buf_writer: bufio.Writer
@@ -133,16 +118,18 @@ main :: proc() {
   coll_str := "Core"
 
   werr: io.Error
-  if _, werr = io.write_string(w, ".TH ODIN_"); werr != nil do return
-  if _, werr = io.write_string(w, pack_str); werr != nil do return
-  if _, werr = io.write_string(w, " 3 \""); werr != nil do return
-  if _, werr = io.write_string(w, date_str); werr != nil do return
-  if _, werr = io.write_string(w, "\" \""); werr != nil do return
-  if _, werr = io.write_string(w, vers_str); werr != nil do return
-  if _, werr = io.write_string(w, "\" \"Odin Collection "); werr != nil do return
-  if _, werr = io.write_string(w, coll_str); werr != nil do return
-  if _, werr = io.write_string(w, "\"\n\n.SH NAME\n"); werr != nil do return
+  _ = io.write_string(w, ".TH ODIN_") or_return
+  _ = io.write_string(w, pack_str) or_return
+  _ = io.write_string(w, " 3 \"") or_return
+  _ = io.write_string(w, date_str) or_return
+  _ = io.write_string(w, "\" \"") or_return
+  _ = io.write_string(w, vers_str) or_return
+  _ = io.write_string(w, "\" \"Odin Collection ") or_return
+  _ = io.write_string(w, coll_str) or_return
+  _ = io.write_string(w, "\"\n\n.SH NAME\n") or_return
+}
 
+parse_and_write_declarations :: proc(code: string, w: io.Writer) {
   h: s.Scanner
   s.init(&h, string(file_content), filename)
   h.flags = s.Odin_Like_Tokens ~ {.Skip_Comments}

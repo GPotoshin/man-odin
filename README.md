@@ -2,6 +2,8 @@
 
 Manual page generator for odin code from comments
 
+state: we are adding ui to the docgen algorithm. Code is not working
+
 ## Raison d'Être
 I found searching the Odin standard library to be somewhat inefficient. The
 website isn't the most ergonomic, and the source code can be quite verbose. To
