@@ -2,7 +2,12 @@
 
 Manual page generator for odin code from comments
 
-state: we are adding ui to the docgen algorithm. Code is not working
+state: Code is partially working
+
+## Features
++ `man` - package with procedures to generate man pages
++ `man-odin core:<pkg>` - generates generates documentation for `<pkg>`, but
+only for an odin file that shares name with package for right now
 
 ## Raison d'Être
 I found searching the Odin standard library to be somewhat inefficient. The
@@ -12,12 +17,10 @@ extracts top-level definitions from every file along with a one-line
 description, producing a compact man file for quick browsing. Further
 inspection can then be done directly in the source code.
 
-## Features
-
 ## Implementation Details
-Initially, I intended to generate man pages from odin-doc files, but the
-current implementation is incomplete and lacks active maintenance. Instead,
-`man-odin` uses `core:text/scanner` to traverse the source and identify
+Initially, I intended to generate man pages from odin-doc files, but I fooound
+the current implementation beeing incomplete and lacking active maintenance.
+Instead, `man-odin` uses `core:text/scanner` to traverse the source and identify
 patterns. The architecture is a finite automaton utilizing a ring buffer for
 token history. Finally, the man page encoding is streamed directly to a file
 via a buffered writer.
