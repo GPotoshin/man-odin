@@ -10,6 +10,7 @@ import s "core:text/scanner"
 COMMENT_LITS :: " /*\n"
 
 write_header :: proc(w: io.Writer, title: string, date: string, collection: string, version: string) -> io.Error {
+  fmt.println("Debug:", date)
   werr: io.Error
   _ = io.write_string(w, ".TH ODIN_") or_return
   _ = io.write_string(w, title) or_return
@@ -56,6 +57,20 @@ read_parse_and_write_description_and_declarations_from_file :: proc(w: io.Writer
 read_parse_and_write_description_and_declarations :: proc {
   read_parse_and_write_description_and_declarations_from_file,
   read_parse_and_write_description_and_declarations_from_path,
+}
+
+read_parse_and_write_declarations_from_path :: proc(w: io.Writer, path: string) {
+  job_alloc := context.temp_allocator
+  defer free_all(job_alloc)
+  data, ferr := os.read_entire_file(path, job_alloc)
+  if ferr != nil {
+    fmt.println("failed to read file:", path, "error:", ferr)
+    return
+  }
+
+  s: Scanner
+  init_scanner(&s, data)
+  parse_and_write_declarations(w, &s)
 }
 
 Scanner :: s.Scanner

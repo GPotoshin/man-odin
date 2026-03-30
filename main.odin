@@ -117,7 +117,7 @@ main :: proc() {
     year, month, _ := time.date(time.now())
     date = strings.concatenate({
         reflect.enum_string(month),
-        fmt.aprint(year, temp_alloc),
+        fmt.aprint(year, allocator = temp_alloc),
       },
       perm_alloc,
     )
@@ -138,6 +138,7 @@ main :: proc() {
       version = "unknown_version"
     } else {
       version = string(version_bytes)
+      version = strings.trim_space(version)
       last_space := strings.last_index_byte(version, ' ')
       version = strings.clone(version[last_space:], perm_alloc)
     }
@@ -192,9 +193,18 @@ main :: proc() {
     }
 
     if package_root_index != -1 {
-      pack_root_path := file_informations[package_root_index].fullpath
-      man.read_parse_and_write_description_and_declarations(w, pack_root_path);
+      path := file_informations[package_root_index].fullpath
+      man.read_parse_and_write_description_and_declarations(w, path);
     }
+
+    for i := 0; i < len(file_informations); i += 1 {
+      if file_informations[i].type == .Regular &&
+        i != package_root_index {
+        path := file_informations[i].fullpath
+        man.read_parse_and_write_declarations_from_path(w, path)
+      }
+    }
+
   case .Regular:
     job_alloc := context.temp_allocator
     defer free_all(job_alloc)
