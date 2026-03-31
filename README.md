@@ -5,9 +5,18 @@ Manual page generator for odin code from comments
 state: Code is partially working
 
 ## Features
+Takes the first line of a comment at the top of the file as a file description, 
+for packages the top line is taken from a file matching the package name.
+Uses the first line of comment above declarations as their description.
+Writes declarations and descriptions to `odin_<basename>.3` for packages and
+to `odin_<basename>_file.3` for file. Declarations marked  with `private` are
+ignored, although the logic for detection of private declarations is not complete.
+
 + `man` - package with procedures to generate man pages
-+ `man-odin core:<pkg>` - generates generates documentation for `<pkg>`, but
-only for an odin file that shares name with package for right now
++ `man-odin <path>` - generates documenetation for package or file in a path
++ `man-odin core:<path>` - generates documentation for `<path>` from odin root
++ `man-odin <path> -install` - installs man pages to `/usr/local/share/man/man3`
+if such exists. You may need to run it as root.
 
 ## Raison d'Être
 I found searching the Odin standard library to be somewhat inefficient. The

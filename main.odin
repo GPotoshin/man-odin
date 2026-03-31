@@ -31,6 +31,7 @@ to_upper :: proc "contextless" (s: []u8) {
 
 Options :: struct {
   path: string `args:"pos=0" usage:"Target directory or file. Current working directory is default. Can be prefixed with collection"`,
+  install: bool `name=install usage:"Searches for '/usr/local/man/man3' folder and uses it as a target paths."`
 }
 
 Buffered_File_Writer :: struct {
@@ -50,6 +51,9 @@ bfw_close_and_destroy :: proc(bfw: ^Buffered_File_Writer) {
   bufio.writer_destroy(&bfw.bw)
 }
 
+
+// outbase path
+
 main :: proc() {
   // context variables
   perm_arena: virtual.Arena
@@ -66,10 +70,11 @@ main :: proc() {
   ferr: os.Error
 
   // command line argumenet processing arguments
-  target_path: string
+  source_path: string
   prefix: string
   subpath: string
   base_name: string
+  prefix_outpath: string
 
   { // parsing option arguments
     temp_alloc := context.temp_allocator
@@ -78,7 +83,7 @@ main :: proc() {
     flags.parse_or_exit(&opt, os.args, .Odin, temp_alloc)
 
     if opt.path == "" {
-      target_path, ferr = os.get_working_directory(perm_alloc)
+      source_path, ferr = os.get_working_directory(perm_alloc)
       if ferr != nil {
         fmt.println("Cannot get current working directory path, please provide a target directory or file")
         return
@@ -95,12 +100,22 @@ main :: proc() {
         prefix = strings.clone(opt.path[:sep], perm_alloc)
         subpath = strings.clone(opt.path[sep+1:], perm_alloc)
 
-        target_path = slashpath.join({odin_path, prefix, subpath}, perm_alloc)
+        source_path = slashpath.join({odin_path, prefix, subpath}, perm_alloc)
       } else {
-        target_path = strings.clone(opt.path, perm_alloc)
+        source_path = strings.clone(opt.path, perm_alloc)
       }
     }
-    base_name = os.base(target_path)
+
+    if opt.install {
+      man_path :: "/usr/local/share/man/man3/"
+      if os.is_dir(man_path) {
+        prefix_outpath = man_path
+      } else {
+        fmt.println("error: `", man_path, "` does not exist")
+        return
+      }
+    }
+    base_name = os.base(source_path)
   }
 
   // Environement Variables
@@ -145,15 +160,15 @@ main :: proc() {
   }
 
   // opennig root_file and parsing files
-  root_file, open_err := os.open(target_path)
+  root_file, open_err := os.open(source_path)
   if open_err != nil {
-    fmt.println("failed to open path:", target_path)
+    fmt.println("failed to open path:", source_path)
     return
   }
   defer os.close(root_file)
   root_info, stat_err := os.fstat(root_file, perm_alloc)
   if stat_err != nil {
-    fmt.println("failed to get path info:", target_path)
+    fmt.println("failed to get path info:", source_path)
     return
   }
 
@@ -161,19 +176,22 @@ main :: proc() {
   case .Directory:
     file_informations, ferr := os.read_directory(root_file, 0, perm_alloc)
     if ferr != nil {
-      fmt.println("failed to read directory:", target_path, "error:", ferr)
+      fmt.println("failed to read directory:", source_path, "error:", ferr)
       return
     }
 
     package_root_index := -1
     for i := 0; i < len(file_informations); i += 1 {
-      if file_informations[i].type == .Regular &&
-        os.stem(file_informations[i].name) == base_name {
+      type := file_informations[i].type
+      stemmed := os.stem(file_informations[i].name)
+      extension := os.ext(file_informations[i].name)
+
+      if type == .Regular && stemmed == base_name && extension == ".odin" {
         package_root_index = i
       }
     }
 
-    outpath := strings.concatenate({"odin_", base_name, ".3"}, perm_alloc)
+    outpath := strings.concatenate({prefix_outpath, "odin_", base_name, ".3"}, perm_alloc)
     // opening output file
     outfile: Buffered_File_Writer
     w, ferr = bfw_open_and_get_writer(&outfile, outpath)
@@ -199,6 +217,7 @@ main :: proc() {
 
     for i := 0; i < len(file_informations); i += 1 {
       if file_informations[i].type == .Regular &&
+        os.ext(file_informations[i].name) == "odin" &&
         i != package_root_index {
         path := file_informations[i].fullpath
         man.read_parse_and_write_declarations_from_path(w, path)
@@ -213,6 +232,16 @@ main :: proc() {
     title = strings.concatenate({"ODIN_", os.stem(base_name), "_FILE"}, job_alloc);
     to_upper(transmute([]u8)(title))
     // @note: title = nil, date - ok, collection - ok, version - not ok
+    outpath := strings.concatenate({prefix_outpath, "odin_", base_name, "_file.3"}, perm_alloc)
+    // opening output file
+    outfile: Buffered_File_Writer
+    w, ferr = bfw_open_and_get_writer(&outfile, outpath)
+    if ferr != nil {
+      fmt.println("failed to open output file:", outpath, "error:", ferr)
+      return
+    }
+    defer bfw_close_and_destroy(&outfile)
+    defer io.flush(w)
     werr := man.write_header(w, title, date, collection, version)
     if werr != nil {
       fmt.println("failed to write header:", werr)

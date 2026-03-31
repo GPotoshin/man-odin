@@ -10,7 +10,6 @@ import s "core:text/scanner"
 COMMENT_LITS :: " /*\n"
 
 write_header :: proc(w: io.Writer, title: string, date: string, collection: string, version: string) -> io.Error {
-  fmt.println("Debug:", date)
   werr: io.Error
   _ = io.write_string(w, ".TH ODIN_") or_return
   _ = io.write_string(w, title) or_return
@@ -222,7 +221,7 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
           replace_char(decl_str, '\t', ' ')
         }
       } else {
-        if h.src[t.end] == '\n' {
+        if t.end < len(h.src) && h.src[t.end] == '\n' {
           // if i >= START && i < END do fmt.println("scanning til end of line")
           if t.tok == '{' {
             decl_str = string(h.src[beg_decl:t.pos])
