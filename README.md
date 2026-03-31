@@ -2,7 +2,7 @@
 
 Manual page generator for odin code from comments
 
-state: Code is partially working
+state: program may include some private declarations
 
 ## Features
 Takes the first line of a comment at the top of the file as a file description, 
