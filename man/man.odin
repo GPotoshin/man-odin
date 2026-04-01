@@ -23,39 +23,22 @@ write_header :: proc(w: io.Writer, title: string, date: string, collection: stri
   return nil
 }
 
-read_parse_and_write_description_and_declarations_from_path :: proc(w: io.Writer, path: string) {
+read_parse_and_write_description_and_declarations :: proc(w: io.Writer, file: $F, collection_name: string) {
+  when F != ^os.File && F != string {
+    #panic("`read_parse_and_write_description_and_declarations` only supports `string` or `os.Handle` for `file` parameter")
+  }
   job_alloc := context.temp_allocator
   defer free_all(job_alloc)
-  data, ferr := os.read_entire_file(path, job_alloc)
+  data, ferr := os.read_entire_file(file, job_alloc)
   if ferr != nil {
-    fmt.println("failed to read file:", path, "error:", ferr)
+    fmt.println("failed to read file:", ferr)
     return
   }
 
   s: Scanner
   init_scanner(&s, data)
-  parse_and_write_package_description(w, &s)
+  parse_and_write_package_description(w, &s, collection_name)
   parse_and_write_declarations(w, &s)
-}
-
-read_parse_and_write_description_and_declarations_from_file :: proc(w: io.Writer, fp: ^os.File) {
-  job_alloc := context.temp_allocator
-  defer free_all(job_alloc)
-  data, ferr := os.read_entire_file(fp, job_alloc)
-  if ferr != nil {
-    fmt.println("failed to read file error:", ferr)
-    return
-  }
-
-  s: Scanner
-  init_scanner(&s, data)
-  parse_and_write_package_description(w, &s)
-  parse_and_write_declarations(w, &s)
-}
-
-read_parse_and_write_description_and_declarations :: proc {
-  read_parse_and_write_description_and_declarations_from_file,
-  read_parse_and_write_description_and_declarations_from_path,
 }
 
 read_parse_and_write_declarations_from_path :: proc(w: io.Writer, path: string) {
@@ -85,23 +68,40 @@ Parse_Flag :: enum u32 {
 }
 Parse_Flags :: distinct bit_set[Parse_Flag; u32]
 
-parse_and_write_package_description :: proc(w: io.Writer, h: ^s.Scanner) {
+parse_and_write_package_description :: proc(w: io.Writer, h: ^s.Scanner, collection_name: string) {
   werr: io.Error
+  package_comment: string
+  package_name: string
 
   {
-    tok: rune
-    if tok = s.scan(h); tok == s.EOF {
-      fmt.println("unexpected end of file in the begging")
-      return
-    }
+    tok := s.scan(h)
     if tok == s.Comment {
       text := s.token_text(h)
-      text = strings.trim(text, COMMENT_LITS)
-      if _, werr = io.write_string(w, "odin strings \\- "); werr != nil do return
-      if _, werr = write_without(w, text, "`"); werr != nil do return
+      package_comment = strings.trim(text, COMMENT_LITS)
+      tok =  s.scan(h)
+    }
+    if s.token_text(h) == "package" {
+      tok = s.scan(h)
+      package_name = s.token_text(h)
     }
   }
-  if _, werr = io.write_string(w, "\n\n.SH SYNOPSIS\n.B import \\&\"core:strings\"\n\n.SH DECLARATIONS\n\n"); werr != nil do return
+
+  if package_comment != "" && package_name != "" {
+      if _, werr = io.write_string(w, "odin "); werr != nil do return
+      if _, werr = io.write_string(w, package_name); werr != nil do return
+      if _, werr = io.write_string(w, " \\- "); werr != nil do return
+      if _, werr = write_without(w, package_comment, "`"); werr != nil do return
+  }
+
+  if package_name != "" {
+    if _, werr = io.write_string(w, "\n\n.SH SYNOPSIS\n.B import \\&\""); werr != nil do return
+    if collection_name != "" {
+      if _, werr = io.write_string(w, collection_name); werr != nil do return
+      if _, werr = io.write_string(w, ":"); werr != nil do return
+    }
+    if _, werr = io.write_string(w, package_name); werr != nil do return
+  }
+  if _, werr = io.write_string(w, "\"\n\n.SH DECLARATIONS\n\n"); werr != nil do return
 }
 
 parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {

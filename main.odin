@@ -141,8 +141,10 @@ main :: proc() {
     if prefix == "" {
       collection = "Odin Code Documentation"
     } else {
-      to_upper_char(raw_data(prefix))
-      collection = strings.concatenate({"Odin Collection ", prefix}, perm_alloc);
+      collection_name_copy := strings.clone(prefix)
+      defer delete(collection_name_copy)
+      to_upper_char(raw_data(collection_name_copy))
+      collection = strings.concatenate({"Odin Collection ", collection_name_copy}, perm_alloc);
     }
 
     // getting odin version
@@ -212,7 +214,7 @@ main :: proc() {
 
     if package_root_index != -1 {
       path := file_informations[package_root_index].fullpath
-      man.read_parse_and_write_description_and_declarations(w, path);
+      man.read_parse_and_write_description_and_declarations(w, path, prefix);
     }
 
     for i := 0; i < len(file_informations); i += 1 {
@@ -248,7 +250,7 @@ main :: proc() {
       return
     }
 
-    man.read_parse_and_write_description_and_declarations(w, root_file);
+    man.read_parse_and_write_description_and_declarations(w, root_file, prefix);
   case:
     fmt.println("unsupported file type")
   }
