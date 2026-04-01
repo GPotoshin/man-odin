@@ -106,6 +106,17 @@ parse_and_write_package_description :: proc(w: io.Writer, h: ^s.Scanner) {
 
 parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
   werr: io.Error
+
+  {
+    tok := s.scan(h)
+    for {
+      if tok != '#' do break
+      if s.scan(h) != '+' do break
+      if s.scan(h) != s.Ident do break
+      if s.token_text(h) == "private" do return
+    }
+  }
+
   Token :: struct {
     tok: rune,
     text: string,
@@ -147,8 +158,8 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
   parsing_stage := 0
   scope_level := 0
 
-  // START :: 2600
-  // END :: START + 2000
+  // START :: 0
+  // END :: START + 5
   i := 0
   for {
     t.tok = s.scan(h)
@@ -165,10 +176,11 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
     case '}': scope_level -= 1
     }
 
-    SEARCHING_DECL :: 0
-    SCANNING_KEYW  :: 1
-    CHECKING_BODY  :: 2
-    SCANNING_DECL  :: 3
+
+    SEARCHING_DECL ::  0
+    SCANNING_KEYW  ::  1
+    CHECKING_BODY  ::  2
+    SCANNING_DECL  ::  3
     switch parsing_stage {
     case SEARCHING_DECL:
       // if i >= START && i < END do fmt.println("SEARCHING_DECL")

@@ -1,8 +1,8 @@
 # MAN-ODIN
 
-Manual page generator for odin code from comments
+`Manual Page` generator for odin code from comments.
 
-state: program may include some private declarations
+status: program may include some private declarations.
 
 ## Features
 Takes the first line of a comment at the top of the file as a file description, 
@@ -27,12 +27,15 @@ description, producing a compact man file for quick browsing. Further
 inspection can then be done directly in the source code.
 
 ## Implementation Details
-Initially, I intended to generate man pages from odin-doc files, but I fooound
+Initially, I intended to generate man pages from odin-doc files, but I found
 the current implementation beeing incomplete and lacking active maintenance.
 Instead, `man-odin` uses `core:text/scanner` to traverse the source and identify
 patterns. The architecture is a finite automaton utilizing a ring buffer for
 token history. Finally, the man page encoding is streamed directly to a file
 via a buffered writer.
+
+P.S. I found out that there is `odin doc` command, so it may be more reasonable
+to rely on it in the future.
 
 ## Future Outlook
 While a more ambitious goal would be the generation of complete offline

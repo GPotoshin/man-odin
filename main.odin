@@ -217,7 +217,7 @@ main :: proc() {
 
     for i := 0; i < len(file_informations); i += 1 {
       if file_informations[i].type == .Regular &&
-        os.ext(file_informations[i].name) == "odin" &&
+        os.ext(file_informations[i].name) == ".odin" &&
         i != package_root_index {
         path := file_informations[i].fullpath
         man.read_parse_and_write_declarations_from_path(w, path)
