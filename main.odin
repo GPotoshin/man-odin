@@ -47,6 +47,7 @@ bfw_open_and_get_writer :: proc(bfw: ^Buffered_File_Writer, path: string) -> (w:
 }
 
 bfw_close_and_destroy :: proc(bfw: ^Buffered_File_Writer) {
+  _ = bufio.writer_flush(&bfw.bw)
   os.close(bfw.fp)
   bufio.writer_destroy(&bfw.bw)
 }
@@ -202,7 +203,6 @@ main :: proc() {
       return
     }
     defer bfw_close_and_destroy(&outfile)
-    defer io.flush(w)
 
     title = strings.concatenate({"ODIN_", os.stem(base_name)}, perm_alloc);
     to_upper(transmute([]u8)(title))
@@ -243,7 +243,6 @@ main :: proc() {
       return
     }
     defer bfw_close_and_destroy(&outfile)
-    defer io.flush(w)
     werr := man.write_header(w, title, date, collection, version)
     if werr != nil {
       fmt.println("failed to write header:", werr)
