@@ -11,7 +11,7 @@ COMMENT_LITS :: " /*\n"
 
 write_header :: proc(w: io.Writer, title: string, date: string, collection: string, version: string) -> io.Error {
   werr: io.Error
-  _ = io.write_string(w, ".TH ODIN_") or_return
+  _ = io.write_string(w, ".TH ") or_return
   _ = io.write_string(w, title) or_return
   _ = io.write_string(w, " 3 \"") or_return
   _ = io.write_string(w, date) or_return
@@ -204,7 +204,7 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
       if t.text == "proc" || t.text == "struct" {
         parsing_stage = CHECKING_BODY
       } else {
-        if h.src[t.end] == '\n' {
+        if t.end < len(h.src) && h.src[t.end] == '\n' {
           werr = write_decl(w, string(h.src[beg_decl:t.end]), comment, flags)
           if werr != nil do return
           parsing_stage = SEARCHING_DECL
