@@ -18,6 +18,8 @@ ignored, although the logic for detection of private declarations is not complet
 + `man-odin <path> -install` - installs man pages to `/usr/local/share/man/man3`
 if such exists. You may need to run it as root.
 
+![screenshot](http://potoshin.com/images/man_odin_image.png)
+
 ## Raison d'Être
 I found searching the Odin standard library to be somewhat inefficient. The
 website isn't the most ergonomic, and the source code can be quite verbose. To
@@ -40,3 +42,7 @@ to rely on it in the future.
 ## Future Outlook
 While a more ambitious goal would be the generation of complete offline
 documentation, that currently remains out of scope for this project.
+
+## TODO
+* core:os process_exec :: proc(    desc: Process_Desc,
+* string "" literals

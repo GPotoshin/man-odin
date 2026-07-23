@@ -151,6 +151,14 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
   rb: Ring_Buffer
   t: Token
 
+  Decl_Kind :: enum {
+    Regular,
+    Proc,
+    Struct,
+    Enum,
+    Union,
+  }
+  decl_kind: Decl_Kind
   comment: string
   beg_decl: int
   flags: Parse_Flags
@@ -176,7 +184,6 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
     case '}': scope_level -= 1
     }
 
-
     SEARCHING_DECL ::  0
     SCANNING_KEYW  ::  1
     CHECKING_BODY  ::  2
@@ -201,7 +208,14 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
       }
     case SCANNING_KEYW:
       // if i >= START && i < END do fmt.println("SCANNING_KEYW")
-      if t.text == "proc" || t.text == "struct" {
+      switch t.text {
+        case "proc": decl_kind = .Proc
+        case "struct": decl_kind = .Struct
+        case "enum": decl_kind = .Enum
+        case "union": decl_kind = .Union
+        case: decl_kind = .Regular
+      }
+      if decl_kind != .Regular {
         parsing_stage = CHECKING_BODY
       } else {
         if t.end < len(h.src) && h.src[t.end] == '\n' {
@@ -214,7 +228,7 @@ parse_and_write_declarations :: proc(w: io.Writer, h: ^s.Scanner) {
       }
     case CHECKING_BODY:
       // if i >= START && i < END do fmt.println("CHECKING_BODY")
-      if t.tok == '{' {
+      if t.tok == '{' || decl_kind == .Enum || decl_kind == .Union {
         flags |= {.Scanning_Body}
       }
       parsing_stage = SCANNING_DECL
