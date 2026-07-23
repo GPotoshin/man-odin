@@ -31,7 +31,7 @@ to_upper :: proc "contextless" (s: []u8) {
 
 Options :: struct {
   path: string `args:"pos=0" usage:"Target directory or file. Current working directory is default. Can be prefixed with collection"`,
-  install: bool `name=install usage:"Searches for '/usr/local/man/man3' folder and uses it as a target paths."`
+  out: string `usage:"Sets output path. The default one is '/usr/local/share/man'. Files are saved under 'man3' directory"`
 }
 
 Buffered_File_Writer :: struct {
@@ -71,11 +71,11 @@ main :: proc() {
   ferr: os.Error
 
   // command line argumenet processing arguments
-  source_path: string
-  prefix: string
-  subpath: string
-  base_name: string
-  prefix_outpath: string
+  source_path : string
+  prefix : string
+  subpath : string
+  base_name : string
+  prefix_outpath := "/usr/local/share/man/man3"
 
   { // parsing option arguments
     temp_alloc := context.temp_allocator
@@ -107,12 +107,16 @@ main :: proc() {
       }
     }
 
-    if opt.install {
-      man_path :: "/usr/local/share/man/man3/"
-      if os.is_dir(man_path) {
-        prefix_outpath = man_path
-      } else {
-        fmt.println("error: `", man_path, "` does not exist")
+    if opt.out != "" && os.is_dir(opt.out) {
+      if !os.is_dir(opt.out) {
+        fmt.println("error: `", opt.out, "` does not exist")
+        return
+      }
+      prefix_outpath = slashpath.join({opt.out, "man3/"}, perm_alloc)
+    }
+    if !os.is_dir(prefix_outpath) {
+      if mk_err := os.make_directory_all(prefix_outpath); mk_err != nil {
+        fmt.println("error: cannot create `", prefix_outpath, "`,", mk_err)
         return
       }
     }
@@ -194,7 +198,7 @@ main :: proc() {
       }
     }
 
-    outpath := strings.concatenate({prefix_outpath, "odin_", base_name, ".3"}, perm_alloc)
+    outpath := strings.concatenate({prefix_outpath, "/odin_", base_name, ".3"}, perm_alloc)
     // opening output file
     outfile: Buffered_File_Writer
     w, ferr = bfw_open_and_get_writer(&outfile, outpath)

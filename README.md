@@ -13,10 +13,11 @@ to `odin_<basename>_file.3` for file. Declarations marked  with `private` are
 ignored, although the logic for detection of private declarations is not complete.
 
 + `man` - package with procedures to generate man pages
-+ `man-odin <path>` - generates documenetation for package or file in a path
-+ `man-odin core:<path>` - generates documentation for `<path>` from odin root
-+ `man-odin <path> -install` - installs man pages to `/usr/local/share/man/man3`
-if such exists. You may need to run it as root.
++ `man-odin <path>` - generates documenetation for a package or a file in a path
+    and outputs it into `/usr/local/share/man/man3`. You may need to run it as root
++ `man-odin core:<path>` - generates documentation for `<path>` from `$(odin root)/core`
+    (or for a different collection, like `vendor` or `base`)
++ `man-odin <path> -out:<outpath>` - sets a custom output path
 
 ![screenshot](http://potoshin.com/images/man_odin_image.png)
 
@@ -46,3 +47,5 @@ documentation, that currently remains out of scope for this project.
 ## TODO
 * core:os process_exec :: proc(    desc: Process_Desc,
 * string "" literals
+* generating for the full standard library
+* setting custom output path
