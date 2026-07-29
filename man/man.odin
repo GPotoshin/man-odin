@@ -1,5 +1,6 @@
 package man
 
+import "base:runtime"
 import "core:os"
 import "core:io"
 import "core:strings"
@@ -9,16 +10,23 @@ import s "core:text/scanner"
 
 COMMENT_LITS :: " /*\n"
 
-write_header :: proc(w: io.Writer, title: string, date: string, collection: string, version: string) -> io.Error {
+Header_Data :: struct {
+  title: string,
+  date: string,
+  collection: string,
+  version: string,
+}
+
+write_header :: proc(w: io.Writer, data: Header_Data) -> io.Error {
   werr: io.Error
   _ = io.write_string(w, ".TH ") or_return
-  _ = io.write_string(w, title) or_return
+  _ = io.write_string(w, data.title) or_return
   _ = io.write_string(w, " 3 \"") or_return
-  _ = io.write_string(w, date) or_return
+  _ = io.write_string(w, data.date) or_return
   _ = io.write_string(w, "\" \"") or_return
-  _ = io.write_string(w, version) or_return
+  _ = io.write_string(w, data.version) or_return
   _ = io.write_string(w, "\" \"") or_return 
-  _ = io.write_string(w, collection) or_return
+  _ = io.write_string(w, data.collection) or_return
   _ = io.write_string(w, "\"\n\n.SH NAME\n") or_return
   return nil
 }
@@ -27,9 +35,9 @@ read_parse_and_write_description_and_declarations :: proc(w: io.Writer, file: $F
   when F != ^os.File && F != string {
     #panic("`read_parse_and_write_description_and_declarations` only supports `string` or `os.Handle` for `file` parameter")
   }
-  job_alloc := context.temp_allocator
-  defer free_all(job_alloc)
-  data, ferr := os.read_entire_file(file, job_alloc)
+  scratch := runtime.default_temp_allocator_temp_begin()
+  defer runtime.default_temp_allocator_temp_end(scratch)
+  data, ferr := os.read_entire_file(file, context.temp_allocator)
   if ferr != nil {
     fmt.println("failed to read file:", ferr)
     return
@@ -42,9 +50,9 @@ read_parse_and_write_description_and_declarations :: proc(w: io.Writer, file: $F
 }
 
 read_parse_and_write_declarations_from_path :: proc(w: io.Writer, path: string) {
-  job_alloc := context.temp_allocator
-  defer free_all(job_alloc)
-  data, ferr := os.read_entire_file(path, job_alloc)
+  scratch := runtime.default_temp_allocator_temp_begin()
+  defer runtime.default_temp_allocator_temp_end(scratch)
+  data, ferr := os.read_entire_file(path, context.temp_allocator)
   if ferr != nil {
     fmt.println("failed to read file:", path, "error:", ferr)
     return
@@ -59,7 +67,7 @@ Scanner :: s.Scanner
 
 init_scanner :: proc(h: ^Scanner, data: []byte) {
   s.init(h, string(data), "")
-  h.flags = s.Odin_Like_Tokens ~ {.Skip_Comments}
+  h.flags = s.Odin_Like_Tokens - {.Skip_Comments}
 }
 
 Parse_Flag :: enum u32 {
@@ -314,4 +322,24 @@ write_without :: proc(w: io.Writer, s: string, skip: string) -> (n: int, err: io
     n += io.write_string(w, s[start:]) or_return
   }
   return
+}
+
+to_upper_char :: proc "contextless" (c: ^u8) {
+  if 'a' <= c^ && c^ <= 'z' {
+    c^ -= 'a'-'A'
+  }
+}
+
+to_upper :: proc "contextless" (s: []u8) {
+  for i := 0; i < len(s); i += 1 {
+    to_upper_char(&s[i])
+  }
+}
+
+odin_collection_string :: proc(name: string, allocator := context.allocator) -> string {
+  scratch := runtime.default_temp_allocator_temp_begin()
+  defer runtime.default_temp_allocator_temp_end(scratch)
+  name_copy := strings.clone(name, context.temp_allocator)
+  to_upper_char(raw_data(name_copy))
+  return strings.concatenate({"Odin Collection ", name_copy}, allocator)
 }
