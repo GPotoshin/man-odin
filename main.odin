@@ -16,8 +16,6 @@ import "core:mem"
 import "core:mem/virtual"
 import "core:log"
 
-import "core:c"
-
 import "man"
 
 Options :: struct {
@@ -45,6 +43,7 @@ bfw_close_and_destroy :: proc(bfw: ^Buffered_File_Writer) {
 }
 
 Gen_Info :: struct {
+	prefix: string, // e.g. core, base, vendor or ""
   out_path: string,
   root_path: string,
   header_data: man.Header_Data,
@@ -70,7 +69,6 @@ main :: proc() {
   gen_info: Gen_Info 
 
   // command line argument processing arguments
-  prefix: string
   subpath: string
   odin_path: string
   gen_info.out_path = "/usr/local/share/man/man3"
@@ -96,9 +94,9 @@ main :: proc() {
       }
     } else if !opt.all_collections {
       if sep := strings.index_rune(opt.path, ':'); sep >= 0 {
-        prefix = strings.clone(opt.path[:sep], perm_alloc)
+        gen_info.prefix = strings.clone(opt.path[:sep], perm_alloc)
         subpath = strings.clone(opt.path[sep+1:], perm_alloc)
-        gen_info.root_path = slashpath.join({odin_path, prefix, subpath}, perm_alloc)
+        gen_info.root_path = slashpath.join({odin_path, gen_info.prefix, subpath}, perm_alloc)
       } else {
         gen_info.root_path = strings.clone(opt.path, perm_alloc)
       }
@@ -132,10 +130,10 @@ main :: proc() {
     )
 
     // making collection name
-    if prefix == "" {
+    if gen_info.prefix == "" {
       gen_info.header_data.collection = "Odin Code Documentation"
     } else {
-      gen_info.header_data.collection = man.odin_collection_string(prefix);
+      gen_info.header_data.collection = man.odin_collection_string(gen_info.prefix);
     }
 
     // getting odin version
@@ -205,7 +203,7 @@ main :: proc() {
       return
     }
 
-    man.read_parse_and_write_description_and_declarations(w, root_file, prefix);
+    man.read_parse_and_write_description_and_declarations(w, root_file, gen_info.prefix);
   case:
     fmt.println("unsupported file type")
   }
@@ -261,7 +259,7 @@ do_package :: proc(root_file: ^os.File, gen_info: Gen_Info) {
 
   if package_root_index != -1 {
     path := file_infos[package_root_index].fullpath
-    man.read_parse_and_write_description_and_declarations(w, path, base_name);
+    man.read_parse_and_write_description_and_declarations(w, path, gen_info.prefix); // it should not be the base_name
   }
 
   for i := 0; i < len(file_infos); i += 1 {
