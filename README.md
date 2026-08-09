@@ -1,4 +1,4 @@
-# MAN-ODIN
+#MAN-ODIN
 
 `Manual Page` generator for odin code from comments.
 
@@ -59,5 +59,8 @@ the scope for this project.
 ## TODO
 * core:os process_exec :: proc(    desc: Process_Desc,
 * string "" literals
-* generating for the full standard library
 * test cases coverege
++ write how to import the package for base:runtime
++ stdin in os and as a separate manpage
++ include synapsys for odin_os
++ no trimming of newline if there are comments in the declaration

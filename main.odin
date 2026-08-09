@@ -16,6 +16,8 @@ import "core:mem"
 import "core:mem/virtual"
 import "core:log"
 
+import "core:c"
+
 import "man"
 
 Options :: struct {
@@ -220,7 +222,7 @@ do_package :: proc(root_file: ^os.File, gen_info: Gen_Info) {
   if gen_info.file_infos != nil {
     file_infos = gen_info.file_infos 
   } else {
-    file_infos, ferr := os.read_directory(root_file, 0, context.temp_allocator)
+    file_infos, ferr = os.read_directory(root_file, 0, context.temp_allocator)
     if ferr != nil {
       fmt.println("failed to read directory:", gen_info.root_path, "error:", ferr)
       return

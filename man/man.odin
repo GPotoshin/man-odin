@@ -18,7 +18,6 @@ Header_Data :: struct {
 }
 
 write_header :: proc(w: io.Writer, data: Header_Data) -> io.Error {
-  werr: io.Error
   _ = io.write_string(w, ".TH ") or_return
   _ = io.write_string(w, data.title) or_return
   _ = io.write_string(w, " 3 \"") or_return
@@ -44,7 +43,13 @@ read_parse_and_write_description_and_declarations :: proc(w: io.Writer, file: $F
   }
 
   s: Scanner
-  init_scanner(&s, data)
+  file_name: string
+  when F == ^os.File {
+    file_name = os.name(file)
+  } else {
+    file_name = file
+  }
+  init_scanner(&s, data, file_name)
   parse_and_write_package_description(w, &s, collection_name)
   parse_and_write_declarations(w, &s)
 }
@@ -59,14 +64,14 @@ read_parse_and_write_declarations_from_path :: proc(w: io.Writer, path: string) 
   }
 
   s: Scanner
-  init_scanner(&s, data)
+  init_scanner(&s, data, path)
   parse_and_write_declarations(w, &s)
 }
 
 Scanner :: s.Scanner
 
-init_scanner :: proc(h: ^Scanner, data: []byte) {
-  s.init(h, string(data), "")
+init_scanner :: proc(h: ^Scanner, data: []byte, filename: string) {
+  s.init(h, string(data), filename)
   h.flags = s.Odin_Like_Tokens - {.Skip_Comments}
 }
 
